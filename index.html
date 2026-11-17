@@ -34,6 +34,7 @@
   .examples p { margin:0 0 10px; font-weight:700; }
   .examples div { display:flex; flex-wrap:wrap; gap:8px; }
   .examples button { flex:1 1 140px; margin:0; padding:14px 10px; font-size:1.05rem; background:var(--accent); color:var(--bg); }
+  .examples button.clear { background:transparent; color:var(--muted); border:2px dashed var(--line); }
 </style>
 </head>
 <body>
@@ -47,6 +48,7 @@
       <button type="button" data-ex="후기">물건 후기</button>
       <button type="button" data-ex="여행">여행 후기</button>
       <button type="button" data-ex="정보">정보 정리</button>
+      <button type="button" id="clear" class="clear">✕ 모두 지우기</button>
     </div>
   </section>
 
@@ -112,13 +114,15 @@ function render() {
   document.getElementById('summary').textContent = problems.length
     ? `⚠ 이름표 글자가 들어간 칸: ${problems.join(', ')}` : '';
   document.getElementById('memoNote').hidden = !isExampleMemo();
-  document.getElementById('out').textContent = build(vals);
+  // 유형만 있는 빈 상태에선 명령어를 보이지 않음
+  document.getElementById('out').textContent = LABELS.slice(1).some(l => vals[l].trim()) ? build(vals) : '';
   document.getElementById('copied').textContent = '';
 }
 
 document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', render));
 document.getElementById('copy').addEventListener('click', async () => {
   const msg = document.getElementById('copied');
+  if (!document.getElementById('out').textContent) { msg.textContent = '칸을 먼저 채워 주세요.'; return; }
   if (isExampleMemo() && !confirm('경험 메모가 아직 예시 그대로예요. 내 경험이 아니면 글에 지어낸 내용이 들어가요.\n그래도 복사할까요?')) return;
   try { await navigator.clipboard.writeText(document.getElementById('out').textContent); msg.textContent = '복사했어요'; }
   catch { msg.textContent = '복사가 안 돼요. 글자를 직접 드래그해 복사해 주세요.'; }
@@ -144,9 +148,16 @@ function isExampleMemo() {
 }
 const current = () => LABELS.map(l => document.getElementById(l).value).join('\n');
 let exampleSnapshot = null; // 예시를 그대로 둔 채 다른 예시를 누를 땐 묻지 않으려고 기억
+const hasOwnInput = () => LABELS.slice(1).some(l => document.getElementById(l).value.trim()) && current() !== exampleSnapshot;
+document.getElementById('clear').addEventListener('click', () => {
+  if (hasOwnInput() && !confirm('쓴 내용이 모두 지워져요. 지울까요?')) return;
+  for (const l of LABELS) document.getElementById(l).value = '';
+  document.getElementById('유형').value = '후기';
+  exampleSnapshot = null;
+  render();
+});
 document.querySelectorAll('[data-ex]').forEach(b => b.addEventListener('click', () => {
-  const typed = LABELS.slice(1).some(l => document.getElementById(l).value.trim()) && current() !== exampleSnapshot;
-  if (typed && !confirm('지금 쓴 내용이 지워지고 예시로 바뀌어요. 바꿀까요?')) return;
+  if (hasOwnInput() && !confirm('지금 쓴 내용이 지워지고 예시로 바뀌어요. 바꿀까요?')) return;
   const ex = EXAMPLES[b.dataset.ex];
   for (const l of LABELS) document.getElementById(l).value = ex[l] || '';
   exampleSnapshot = current();
