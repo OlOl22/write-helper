@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>글쓰기 명령 도우미</title>
+<style>
+  :root { --bg:#fafaf9; --fg:#1c1917; --muted:#57534e; --line:#d6d3d1; --card:#fff; --warn:#b91c1c; --warnbg:#fef2f2; --accent:#15803d; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1917; --fg:#f5f5f4; --muted:#a8a29e; --line:#44403c; --card:#292524; --warn:#fca5a5; --warnbg:#3f1d1d; --accent:#4ade80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, "Malgun Gothic", sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  p.sub { margin:0 0 24px; color:var(--muted); font-size:.95rem; }
+  .field { margin-bottom:16px; }
+  label { display:block; font-weight:600; margin-bottom:4px; }
+  .hint { color:var(--muted); font-weight:400; font-size:.85rem; }
+  input, select, textarea { width:100%; padding:10px; font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  textarea { min-height:110px; resize:vertical; }
+  ::placeholder { color:var(--muted); opacity:.7; }
+  .bad { border-color:var(--warn); }
+  .warn { color:var(--warn); font-size:.9rem; margin-top:4px; }
+  .warn:empty { display:none; }
+  #summary { background:var(--warnbg); color:var(--warn); padding:10px 12px; border-radius:8px; margin-bottom:8px; font-size:.95rem; }
+  #summary:empty { display:none; }
+  #out { white-space:pre-wrap; word-break:break-all; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:48px; font-family:ui-monospace, Consolas, monospace; font-size:.9rem; }
+  button { margin-top:8px; padding:10px 18px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--fg); color:var(--bg); cursor:pointer; }
+  #copied { color:var(--accent); margin-left:8px; }
+  .note { background:var(--warnbg); color:var(--warn); font-weight:700; padding:8px 12px; border-radius:8px; margin-bottom:6px; }
+  .note[hidden] { display:none; }
+  .examples { border:2px solid var(--accent); border-radius:12px; padding:14px; margin-bottom:24px; }
+  .examples p { margin:0 0 10px; font-weight:700; }
+  .examples div { display:flex; flex-wrap:wrap; gap:8px; }
+  .examples button { flex:1 1 140px; margin:0; padding:14px 10px; font-size:1.05rem; background:var(--accent); color:var(--bg); }
+</style>
+</head>
+<body>
+<main>
+  <h1>/write 명령어 만들기</h1>
+  <p class="sub">칸을 채우면 아래에 명령어 한 줄이 만들어져요. 빈 칸은 빠져요.</p>
+
+  <section class="examples" aria-label="예시로 채우기">
+    <p>예시로 채워 보기</p>
+    <div>
+      <button type="button" data-ex="후기">물건 후기</button>
+      <button type="button" data-ex="여행">여행 후기</button>
+      <button type="button" data-ex="정보">정보 정리</button>
+    </div>
+  </section>
+
+  <div class="field">
+    <label for="유형">유형 <span class="hint">— 어떤 글인지 (물건 후기 / 여행 후기 / 정보 정리)</span></label>
+    <select id="유형"><option>후기</option><option>여행</option><option>정보</option></select>
+  </div>
+  <div class="field">
+    <label for="주제">주제 <span class="hint">— 무엇에 대한 글인지 한 줄로</span></label>
+    <input id="주제" placeholder="예) 소니 ZV-1 두 달 사용 후기"><div class="warn"></div>
+  </div>
+  <div class="field">
+    <label for="독자 상황">독자 상황 <span class="hint">— 누가 + 어떤 상황에서 + 뭘 궁금해하는지</span></label>
+    <input id="독자 상황" placeholder="예) 브이로그용 카메라를 살까 고민하며 실제 후기를 찾는 사람"><div class="warn"></div>
+  </div>
+  <div class="field">
+    <label for="한줄 메모">경험 메모 <span class="hint">— 직접 겪은 것만. 여러 줄로 써도 " / "로 이어 한 줄이 돼요</span></label>
+    <div id="memoNote" class="note" role="status" hidden>예시예요. 꼭 내 경험으로 바꿔 주세요</div>
+    <textarea id="한줄 메모" placeholder="예)&#10;두 달 동안 주말마다 들고 다님&#10;배터리는 1시간 반쯤 버팀&#10;손떨림 보정은 걸을 때 아쉬움"></textarea><div class="warn"></div>
+  </div>
+  <div class="field">
+    <label for="키워드">키워드 <span class="hint">— 검색에 걸리면 좋을 말, 쉼표로 구분</span></label>
+    <input id="키워드" placeholder="예) 브이로그 카메라, ZV-1 후기, 입문용 카메라"><div class="warn"></div>
+  </div>
+  <div class="field">
+    <label for="사진">사진 폴더 이름 <span class="hint">— input/photos/ 안의 폴더 이름만 (사진 없으면 비워 두기)</span></label>
+    <input id="사진" placeholder="예) zv1후기"><div class="warn"></div>
+  </div>
+  <div class="field">
+    <label for="참고 자료">참고 자료 <span class="hint">— 사실 확인에 쓸 주소나 자료 이름 (없으면 비워 두기)</span></label>
+    <input id="참고 자료" placeholder="예) 소니 공식 제품 페이지"><div class="warn"></div>
+  </div>
+
+  <div id="summary" role="alert"></div>
+  <div id="out" aria-live="polite"></div>
+  <button id="copy" type="button">복사</button><span id="copied"></span>
+</main>
+<script>
+const LABELS = ['유형', '주제', '독자 상황', '한줄 메모', '키워드', '사진', '참고 자료'];
+// "독자상황:", "주제 ：" 처럼 띄어쓰기·전각 콜론이 달라도 /write는 이름표로 볼 수 있어서 함께 잡음
+const LABEL_RES = LABELS.map(l => [l, new RegExp(l.replace(/ /g, '\\s*') + '\\s*[:：]')]);
+
+const joinLines = s => s.split(/\r?\n/).map(x => x.trim()).filter(Boolean).join(' / ');
+const oneLine = s => s.replace(/\s*\r?\n\s*/g, ' ').trim();
+const findLabels = s => LABEL_RES.filter(([, re]) => re.test(s)).map(([l]) => l);
+const build = vals => '/write ' + LABELS
+  .map(l => [l, l === '한줄 메모' ? joinLines(vals[l] || '') : oneLine(vals[l] || '')])
+  .filter(([, v]) => v).map(([l, v]) => `${l}: ${v}`).join(', ');
+
+function render() {
+  const vals = {}, problems = [];
+  for (const l of LABELS) {
+    const el = document.getElementById(l);
+    vals[l] = el.value;
+    const warn = el.nextElementSibling;
+    if (!warn) continue; // 유형 선택칸은 경고 없음
+    const found = findLabels(el.value);
+    el.classList.toggle('bad', found.length > 0);
+    warn.textContent = found.length
+      ? `‘${found.join(':’, ‘')}:’ 글자가 있으면 /write가 칸을 잘못 나눠요. 콜론(:)을 빼 주세요.` : '';
+    if (found.length) problems.push(l === '한줄 메모' ? '경험 메모' : l);
+  }
+  document.getElementById('summary').textContent = problems.length
+    ? `⚠ 이름표 글자가 들어간 칸: ${problems.join(', ')}` : '';
+  document.getElementById('memoNote').hidden = !isExampleMemo();
+  document.getElementById('out').textContent = build(vals);
+  document.getElementById('copied').textContent = '';
+}
+
+document.querySelectorAll('input, select, textarea').forEach(el => el.addEventListener('input', render));
+document.getElementById('copy').addEventListener('click', async () => {
+  const msg = document.getElementById('copied');
+  if (isExampleMemo() && !confirm('경험 메모가 아직 예시 그대로예요. 내 경험이 아니면 글에 지어낸 내용이 들어가요.\n그래도 복사할까요?')) return;
+  try { await navigator.clipboard.writeText(document.getElementById('out').textContent); msg.textContent = '복사했어요'; }
+  catch { msg.textContent = '복사가 안 돼요. 글자를 직접 드래그해 복사해 주세요.'; }
+});
+const EXAMPLES = {
+  후기: { 유형: '후기', 주제: '소니 ZV-1 두 달 사용 후기',
+    '독자 상황': '브이로그용 카메라를 살까 고민하며 실제 후기를 찾는 사람',
+    '한줄 메모': '두 달 동안 주말마다 들고 다님\n배터리는 1시간 반쯤 버팀\n손떨림 보정은 걸을 때 아쉬움',
+    키워드: '브이로그 카메라, ZV-1 후기, 입문용 카메라', 사진: 'zv1후기', '참고 자료': '소니 공식 제품 페이지' },
+  여행: { 유형: '여행', 주제: '제주 동쪽 1박2일 코스',
+    '독자 상황': '처음 제주 동쪽에 가려는데 하루 동선을 어떻게 짤지 궁금한 사람',
+    '한줄 메모': '첫날 아침 7시에 성산일출봉 올라감\n점심은 세화 해변 근처 카페\n둘째 날 비자림 1시간 산책',
+    키워드: '제주 동쪽 여행, 제주 1박2일, 성산일출봉', 사진: '제주여행', '참고 자료': '비짓제주 관광 정보' },
+  정보: { 유형: '정보', 주제: '연말정산 의료비 공제 받는 법',
+    '독자 상황': '처음 연말정산을 하는데 병원비도 공제되는지 빨리 알고 싶은 직장인',
+    '한줄 메모': '작년에 산 안경 영수증을 따로 챙김\n간소화 자료에 안경 구입 내역이 빠져 있었음',
+    키워드: '연말정산 의료비, 의료비 공제, 안경 공제', 사진: '', '참고 자료': '국세청 홈택스 연말정산 안내' },
+};
+// 한 글자라도 고치면 예시가 아닌 것으로 봄
+function isExampleMemo() {
+  const m = document.getElementById('한줄 메모').value.trim();
+  return !!m && Object.values(EXAMPLES).some(ex => ex['한줄 메모'] === m);
+}
+const current = () => LABELS.map(l => document.getElementById(l).value).join('\n');
+let exampleSnapshot = null; // 예시를 그대로 둔 채 다른 예시를 누를 땐 묻지 않으려고 기억
+document.querySelectorAll('[data-ex]').forEach(b => b.addEventListener('click', () => {
+  const typed = LABELS.slice(1).some(l => document.getElementById(l).value.trim()) && current() !== exampleSnapshot;
+  if (typed && !confirm('지금 쓴 내용이 지워지고 예시로 바뀌어요. 바꿀까요?')) return;
+  const ex = EXAMPLES[b.dataset.ex];
+  for (const l of LABELS) document.getElementById(l).value = ex[l] || '';
+  exampleSnapshot = current();
+  render();
+}));
+render();
+
+if (location.search.includes('test')) {
+  console.assert(Object.values(EXAMPLES).every(ex => LABELS.every(l => !findLabels(ex[l] || '').length)), 'examples clean');
+  console.assert(joinLines('a\nb\r\nc') === 'a / b / c', 'join');
+  console.assert(joinLines('  a \n\n  \n b ') === 'a / b', 'blank lines');
+  console.assert(findLabels('제주 주제: 여행').join() === '주제', 'detect');
+  console.assert(findLabels('독자상황：급함').join() === '독자 상황', 'detect loose');
+  console.assert(findLabels('사진 찍기, 키워드 정리').length === 0, 'no false hit');
+  console.assert(build({ 유형: '후기', 주제: '', 키워드: 'a, b' }) === '/write 유형: 후기, 키워드: a, b', 'skip empty');
+  console.log('self-test done');
+}
+</script>
+</body>
+</html>
